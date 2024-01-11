@@ -12,12 +12,9 @@ import Control.Concurrent
 import Control.Lens hiding (pre, re)
 import Control.Monad
 import Control.Monad (unless, when)
-import qualified Control.Monad.State as CMS
--- import AronDevLib
 
 import Data.Array.IO
 import qualified Data.Array.IO as DAO
-import Data.Complex
 import Data.IORef
 import Data.Int
 import qualified Data.List as DL
@@ -29,12 +26,7 @@ import Data.StateVar
 import Data.Typeable
 import Data.Typeable (typeOf)
 import qualified Data.Vector as VU
-import Foreign.ForeignPtr
-import Foreign.Marshal.Alloc
-import Foreign.Marshal.Array
-import Foreign.Marshal.Utils
-import Foreign.Ptr
-import Foreign.Storable
+
 import GHC.Float.RealFracMethods
 import Graphics.Rendering.OpenGL
 import Graphics.Rendering.OpenGL as GL
@@ -42,40 +34,11 @@ import Graphics.Rendering.OpenGL.GL.CoordTrans
 import Graphics.Rendering.OpenGL.GLU.Matrix as GM
 import qualified Graphics.UI.GLFW as G
 import qualified Graphics.UI.GLUT as GLUT
-import Language.Haskell.Interpreter
 import System.Directory
 import System.Environment
 import System.Exit
 import System.IO
 import qualified Text.Printf as PR
-
--- |
---
---   | --------------------------------------------------------------------------------
---   | compile: run.sh
---   | ghc -i/Users/cat/myfile/bitbucket/haskelllib -o file file.hs
---   |
---   | KEY: keyboard example, keypress example, modifyIORef example,
---   |
---   | Tuesday, 09 November 2021 11:56 PST
---   |
---   | TODO: Combine Cam{..} and Step{..} in one function with Keyboard input
---   |     Current issue: try to implement orthogonal projective with key one press
---   |                    but Step{..} and Cam{..} are different type class.
---   |
---   | mainLoop w refCam refStep refCount lssVex
---   | keyboardRot refCam refStep (fromIntegral width) (fromIntegral height)
---
---   @
---   data Cam = Cam{alpha::Double, beta::Double, gramma::Double, dist::Double} deriving(Show)
---
---   data Step = Step{xx::Double, yy::Double, zz::Double, ww::Double} deriving(Show)
---   initCam = Cam{alpha=0.0, beta=0.0, gramma=0.0, dist = 0.0}
---   initStep = Step{xx=0.0, yy=0.0, zz=0.0, ww = 0.01}
---
---   SEE: Check the following code why the cube does not draw properly
---   NOTE: /Users/aaa/myfile/bitbucket/opengl/KeyBoardRotate/cube.c
---   @
 
 renderText :: String -> IO ()
 renderText str = do
@@ -243,8 +206,6 @@ keyBoardCallBack2 refStep refGlobalRef ioArray window key scanCode keyState modK
   case keyState of
     ks
       | ks `elem` [G.KeyState'Pressed, G.KeyState'Repeating] -> do
-        -- G.KeyState'Pressed -> do
-        -- write Step{...} to ref
         case key of
           k
             | k == G.Key'Right -> modifyIORef refStep (\s -> s{xx = _STEP})
@@ -284,31 +245,13 @@ keyBoardCallBack2 refStep refGlobalRef ioArray window key scanCode keyState modK
 
             | k == G.Key'W -> do
               fw "Rotate Block"
-              pp "rotate me"
-
             | k == G.Key'P -> do
               pp "Pause"
             | k == G.Key'A -> do
               pp "rotateN 1"
             | k == G.Key'L || k == G.Key'R -> do
               print "kk"
-
             | k == G.Key'U -> do
-              bmap <- readIORef refGlobalRef <&> boardMap_
-              bmapX <- readIORef refGlobalRef <&> boardMap1_
-              centerBrick <- readIORef refGlobalRef <&> centerBrick_
-              rotN <- readIORef refGlobalRef <&> rotN_
-              bk1 <- readIORef refGlobalRef <&> bk1_
-              tet <- readIORef refGlobalRef <&> tetris1_
-              let bk1' = rotateN rotN bk1
-              let bk1'X = rotateN rotN (tet ^. _4)
-
-              -- let mk = (join . join) $ (map . map) fst $ (map . filter) (\(_, n) -> n == 1) $ (map . zip) centerBrick bk1
-              let lz = join $ (map . filter) (\(_, n) -> n == 1) $ (zipWith . zipWith) (\x y -> (x, y)) centerBrick bk1'
-              let ls = map fst lz
-              let lzX = join $ (map . filter) (\(_, n) -> n == 1) $ (zipWith . zipWith) (\x y -> (x, y)) centerBrick bk1'X
-              let lsX = map fst lzX
-
               print "kk"
             | k == G.Key'D -> do
               print "kk"
@@ -384,7 +327,6 @@ mouseCallback globalRef window but butState mk = do
       let pos = (0.0, 0.0)
       -- readIORef globalRef >>= \x -> writeIORef globalRef $ setMousePressed (False, pos) x
       modifyIORef globalRef (\x -> x {mousePressed_ = (False, pos)})
-
       pp "Button Released"
 
 
@@ -415,60 +357,20 @@ initRectGrid =
       rotStep = 20
     }
 
-
-  
--- |
---
---   The cube is from following URL
---   http://localhost/html/indexUnderstandOpenGL.html
+{-|
+ 
+   * The cube is from following URL
+   <http://localhost/html/indexUnderstandOpenGL.html>
+-}
 drawCube :: IO ()
 drawCube = do
   preservingMatrix $ do
-    renderPrimitive Quads $
-      mapM_
-        ( \v -> do
-            color green
-            vertex v
-        )
-        ls_top
-    renderPrimitive Quads $
-      mapM_
-        ( \v -> do
-            color magenta
-            vertex v
-        )
-        ls_bot
-    renderPrimitive Quads $
-      mapM_
-        ( \v -> do
-            color cyan
-            vertex v
-        )
-        ls_front
-  
-    renderPrimitive Quads $
-      mapM_
-        ( \v -> do
-            color blue
-            vertex v
-        )
-        ls_back
-  
-    renderPrimitive Quads $
-      mapM_
-        ( \v -> do
-            color yellow
-            vertex v
-        )
-        ls_left
- 
-    renderPrimitive Quads $
-      mapM_
-        ( \v -> do
-            color gray
-            vertex v
-        )
-        ls_right
+    drawQuad green   ls_top
+    drawQuad magenta ls_bot
+    drawQuad cyan    ls_back
+    drawQuad blue    ls_front
+    drawQuad yellow  ls_left
+    drawQuad gray    ls_right
   where
     b = 0.3 :: GLfloat
     p0 = Vertex3 b    b    (-b)
@@ -544,13 +446,8 @@ mainLoopTest w refCam refStep refGlobal refGlobalFrame animaStateArr lssVex ioAr
   viewport $= (Position 0 0, Size (fromIntegral width) (fromIntegral height))
   
   GL.clear [ColorBuffer, DepthBuffer]
-  -- Enable income pixel depth test
-  -- GL.depthFunc $= Just Less
-  -- GL.depthFunc $= Just Lequal
   GL.depthFunc $= Just Lequal
-  -- GL.cullFace  $= Just Back
-  -- GL.depthFunc $= Just Less
-  
+
   G.setKeyCallback w (Just $ keyBoardCallBack2 refStep refGlobal ioArray) -- AronOpenGL
   G.setMouseButtonCallback w (Just $ mouseCallback refGlobal) -- mouse event
   -- lightingInfo
@@ -594,7 +491,7 @@ mainLoopTest w refCam refStep refGlobal refGlobalFrame animaStateArr lssVex ioAr
 
   
   let anima0 = 0
-  let interval = 100  -- larger number is slower
+  let interval = 10  -- larger number is slower
   (isNext0, index, animaState) <- readAnimaState animaStateArr anima0 interval
   logFileG ["index00=" ++ show index]
   logFileG ["isNext00=" ++ show isNext0]
@@ -630,7 +527,7 @@ mainLoopTest w refCam refStep refGlobal refGlobalFrame animaStateArr lssVex ioAr
   let intervalx = 0  -- larger number is slower
   (isNext1, index1, animaState1) <- readAnimaState animaStateArr anima1 intervalx
   let fn = "/tmp/img_" ++ show (index1 + 1000) ++ ".png"
-  saveImageOpenGL w fn
+  -- saveImageOpenGL w fn
   writeAnimaState animaStateArr animaState1{animaIndex_ = index1}
   mainLoopTest w refCam refStep refGlobal refGlobalFrame animaStateArr lssVex ioArray
 
@@ -648,6 +545,3 @@ main = do
         _ -> do
           print $ "Wrong option => " ++ head argList ++ ", -h => Help"
     else mymain
-
-
-
